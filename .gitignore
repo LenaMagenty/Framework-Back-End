@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# PyCharm
+.idea/
+*.iml
+
+# Logs
+logs/
+*/logs/
+*.log
+*.log.
+
+# Test artifacts
+artifacts/
+junit.xml
+pytest_cache/
+.pytest_cache/
+
+# Coverage
+.coverage
+htmlcov/
+coverage.xml
+
+# Docker
+*.tar
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.*
+
+# Temporary files
+*.swp
+*.swo
