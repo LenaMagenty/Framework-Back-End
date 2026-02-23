@@ -1,4 +1,5 @@
 from services.general.base_service import BaseService
+from services.general.models.success_response import SuccessResponse
 from services.university.helpers.grade_helper import GradeHelper
 from services.university.helpers.group_helper import GroupHelper
 from services.university.helpers.student_helper import StudentHelper
@@ -46,14 +47,33 @@ class UniversityService(BaseService):
         )
         return TeacherResponse(**response.json())
 
+    def delete_teacher(self, teacher_id: int) -> SuccessResponse:
+        response = self.teacher_helper.delete_teacher(teacher_id=teacher_id)
+        return SuccessResponse(**response.json())
+
     def create_grade(self, grade_request: GradeRequest) -> GradeResponse:
         response = self.grade_helper.post_grade(
             data=grade_request.model_dump()
         )
         return GradeResponse(**response.json())
 
-    def get_grades_stats(self, **kwargs) -> GradesStatsResponse:
-        response = self.grade_helper.get_grades_stats(**kwargs)
+    def get_grades_stats(
+            self,
+            student_id: int | None = None,
+            teacher_id: int | None = None,
+            group_id: int | None = None
+    ) -> GradesStatsResponse:
+
+        params = {}
+
+        if student_id is not None:
+            params["student_id"] = student_id
+        if teacher_id is not None:
+            params["teacher_id"] = teacher_id
+        if group_id is not None:
+            params["group_id"] = group_id
+
+        response = self.grade_helper.get_grades_stats(**params)
         return GradesStatsResponse(**response.json())
 
     def update_student(self, student_id: int, student_request: StudentRequest) -> StudentResponse:

@@ -1,4 +1,6 @@
 import random
+
+import pytest
 from faker import Faker
 
 from logger.logger import Logger
@@ -6,10 +8,12 @@ from services.university.models.base_student import DegreeEnum
 from services.university.models.group_request import GroupRequest
 from services.university.models.student_request import StudentRequest
 from services.university.university_service import UniversityService
+from utils.assertions import soft_assert_equal
 
 faker = Faker()
 
 
+@pytest.mark.service
 class TestStudentUpdate:
     def test_student_update_last_name(self, university_api_utils_admin):
         university_service = UniversityService(api_utils=university_api_utils_admin)
@@ -50,22 +54,21 @@ class TestStudentUpdate:
             student_request=updated_student_request
         )
 
-        assert updated_student_response.id == student_response.id, \
-            (f"Wrong student id after update. Actual: '{updated_student_response.id}', "
-             f"but expected: '{student_response.id}'")
+        errors: list[str] = []
 
-        assert updated_student_response.last_name == new_last_name, \
-            (f"Last name wasn't updated. Actual: '{updated_student_response.last_name}', "
-             f"but expected: '{new_last_name}'")
+        soft_assert_equal(updated_student_response.id, student_response.id,
+                          "Wrong student id after update.", errors)
 
-        assert updated_student_response.first_name == student_response.first_name, \
-            (f"First name changed unexpectedly. Actual: '{updated_student_response.first_name}', "
-             f"but expected: '{student_response.first_name}'")
+        soft_assert_equal(updated_student_response.last_name, new_last_name,
+                          "Last name wasn't updated.", errors)
 
-        assert updated_student_response.email == student_response.email, \
-            (f"Email changed unexpectedly. Actual: '{updated_student_response.email}', "
-             f"but expected: '{student_response.email}'")
+        soft_assert_equal(updated_student_response.first_name, student_response.first_name,
+                          "First name changed unexpectedly.", errors)
 
-        assert updated_student_response.group_id == student_response.group_id, \
-            (f"Group id changed unexpectedly. Actual: '{updated_student_response.group_id}', "
-             f"but expected: '{student_response.group_id}'")
+        soft_assert_equal(updated_student_response.email, student_response.email,
+                          "Email changed unexpectedly.", errors)
+
+        soft_assert_equal(updated_student_response.group_id, student_response.group_id,
+                          "Group id changed unexpectedly.", errors)
+
+        assert not errors, "Soft-assert failures:\n" + "\n".join(errors)

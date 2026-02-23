@@ -1,5 +1,6 @@
 import random
 
+import pytest
 from faker import Faker
 
 from logger.logger import Logger
@@ -10,7 +11,9 @@ from services.university.university_service import UniversityService
 
 faker = Faker()
 
+
 # Это верхне уровневый тест, в нём оперируем моделями.
+@pytest.mark.service
 class TestStudent:
     def test_student_create(self, university_api_utils_admin):
         Logger.info("### Step 1. Create group")
@@ -28,6 +31,6 @@ class TestStudent:
                                  group_id=group_response.id)
         student_response = university_service.create_student(student_request=student)
 
-        assert student_response.group_id == group_response.id,\
+        assert student_response.group_id == group_response.id, \
             (f"Wrong group id. Actual: '{student_response.group_id}',"
              f"but expected: '{group_response.id}'")

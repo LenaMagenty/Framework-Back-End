@@ -11,9 +11,9 @@ faker = Faker()
 
 
 @pytest.mark.service
-class TestTeacherDelete:
+class TestTeacherCreate:
 
-    def test_delete_teacher_success(self, university_api_utils_admin):
+    def test_teacher_create(self, university_api_utils_admin):
         university_service = UniversityService(api_utils=university_api_utils_admin)
 
         teacher = TeacherRequest(first_name=faker.first_name(),
@@ -22,12 +22,5 @@ class TestTeacherDelete:
 
         teacher_response = university_service.create_teacher(teacher_request=teacher)
 
-        teacher_id = teacher_response.id
-
-        delete_response = university_service.delete_teacher(teacher_id=teacher_id)
-
-        assert delete_response.detail == 'Teacher deleted', (
-            f"Wrong success message on delete. "
-            f"Actual: '{delete_response.detail}', "
-            f"Expected: 'Teacher deleted'"
-        )
+        assert teacher_response.id is not None, \
+            f"Teacher id should not be None. Response: {teacher_response}"

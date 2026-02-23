@@ -1,6 +1,7 @@
 import random
 
 import pytest
+
 from faker import Faker
 
 from services.university.models.base_teacher import SubjectEnum
@@ -13,7 +14,7 @@ faker = Faker()
 @pytest.mark.service
 class TestTeacherDelete:
 
-    def test_delete_teacher_success(self, university_api_utils_admin):
+    def test_delete_teacher_twice(self, university_api_utils_admin):
         university_service = UniversityService(api_utils=university_api_utils_admin)
 
         teacher = TeacherRequest(first_name=faker.first_name(),
@@ -24,10 +25,12 @@ class TestTeacherDelete:
 
         teacher_id = teacher_response.id
 
-        delete_response = university_service.delete_teacher(teacher_id=teacher_id)
+        university_service.delete_teacher(teacher_id=teacher_id)
 
-        assert delete_response.detail == 'Teacher deleted', (
-            f"Wrong success message on delete. "
-            f"Actual: '{delete_response.detail}', "
-            f"Expected: 'Teacher deleted'"
+        delete_again_response = university_service.delete_teacher(teacher_id=teacher_id)
+
+        assert delete_again_response.detail == 'Teacher not found', (
+            f"Unexpected message on second delete. "
+            f"Actual: '{delete_again_response.detail}', "
+            f"Expected: 'Teacher not found'"
         )

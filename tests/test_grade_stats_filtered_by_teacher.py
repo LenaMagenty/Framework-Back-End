@@ -11,12 +11,26 @@ from services.university.models.group_request import GroupRequest
 from services.university.models.student_request import StudentRequest
 from services.university.models.teacher_request import TeacherRequest
 from services.university.university_service import UniversityService
+from utils.assertions import soft_assert_equal
 
 faker = Faker()
 
 
+@pytest.mark.service
 class TestGradesStats:
-    def test_grade_stats_filtered_by_teacher(self, university_api_utils_admin):
+    @pytest.mark.parametrize(
+        "grades_a, grades_b",
+        [
+            ([2, 5], [1, 1, 4]),
+            ([3, 3, 5], [2]),
+            ([1], [5, 5, 5]),
+        ]
+    )
+    def test_grade_stats_filtered_by_teacher(self,
+                                             university_api_utils_admin,
+                                             grades_a,
+                                             grades_b):
+
         university_service = UniversityService(api_utils=university_api_utils_admin)
 
         Logger.info('### Step 1. Create group')
@@ -49,47 +63,61 @@ class TestGradesStats:
         )
         student_response = university_service.create_student(student_request=student)
 
-        assert student_response.group_id == group_response.id, \
-            (f"Wrong group id. Actual: '{student_response.group_id}', "
-             f"but expected: '{group_response.id}'")
-
         Logger.info('### Step 4. Create grades for two teachers')
-        grades_a = [2, 5]
-        grades_b = [1, 1, 4]
 
         for value in grades_a:
-            grade = GradeRequest(
-                teacher_id=teacher_a_response.id,
-                student_id=student_response.id,
-                grade=value
+            university_service.create_grade(
+                grade_request=GradeRequest(
+                    teacher_id=teacher_a_response.id,
+                    student_id=student_response.id,
+                    grade=value
+                )
             )
-            university_service.create_grade(grade_request=grade)
 
         for value in grades_b:
-            grade = GradeRequest(
-                teacher_id=teacher_b_response.id,
-                student_id=student_response.id,
-                grade=value
+            university_service.create_grade(
+                grade_request=GradeRequest(
+                    teacher_id=teacher_b_response.id,
+                    student_id=student_response.id,
+                    grade=value
+                )
             )
-            university_service.create_grade(grade_request=grade)
 
         Logger.info('### Step 5. Get stats filtered by teacher A and validate')
-        stats = university_service.get_grades_stats(teacher_id=teacher_a_response.id)
+        stats = university_service.get_grades_stats(
+            teacher_id=teacher_a_response.id
+        )
 
         expected_avg = sum(grades_a) / len(grades_a)
 
-        assert stats.count == len(grades_a), \
-            (f"Wrong count for teacher filter. Actual: '{stats.count}', "
-             f"but expected: '{len(grades_a)}'")
+        errors: list[str] = []
 
-        assert stats.min == min(grades_a), \
-            (f"Wrong min for teacher filter. Actual: '{stats.min}', "
-             f"but expected: '{min(grades_a)}'")
+        soft_assert_equal(
+            stats.count,
+            len(grades_a),
+            "Wrong count for teacher filter.",
+            errors
+        )
 
-        assert stats.max == max(grades_a), \
-            (f"Wrong max for teacher filter. Actual: '{stats.max}', "
-             f"but expected: '{max(grades_a)}'")
+        soft_assert_equal(
+            stats.min,
+            min(grades_a),
+            "Wrong min for teacher filter.",
+            errors
+        )
 
-        assert stats.avg == pytest.approx(expected_avg, 0.01), \
-            (f"Wrong avg for teacher filter. Actual: '{stats.avg}', "
-             f"but expected: '{expected_avg}'")
+        soft_assert_equal(
+            stats.max,
+            max(grades_a),
+            "Wrong max for teacher filter.",
+            errors
+        )
+
+        soft_assert_equal(
+            round(stats.avg, 2),
+            round(expected_avg, 2),
+            "Wrong avg for teacher filter.",
+            errors
+        )
+
+        assert not errors, "Soft-assert failures:\n" + "\n".join(errors)
