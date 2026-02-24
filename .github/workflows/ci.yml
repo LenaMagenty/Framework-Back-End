@@ -41,11 +41,6 @@ jobs:
           docker compose up -d --no-build
           docker compose ps
 
-      - name: Compose logs on failure
-        if: failure()
-        run: |
-          docker compose ps
-          docker compose logs --no-color
 
       - name: Wait for services to be ready
         run: |
@@ -71,7 +66,7 @@ jobs:
       - name: Build tests image
         run: docker build -t api-tests:ci .
 
-      - name: Run tests in Docker (host network)
+      - name: Run tests in Docker
         run: |
           rm -rf artifacts
           mkdir -p artifacts/allure-results

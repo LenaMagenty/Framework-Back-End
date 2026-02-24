@@ -10,6 +10,6 @@ class TestGradesStatsContract:
 
         response = grade_helper.get_grades_stats()
 
-        assert response.status_code == requests.status_codes.codes.forbidden, \
+        assert response.status_code == requests.status_codes.codes.unauthorized, \
             (f"Wrong status code. Actual: '{response.status_code}', "
              f"but expected '{requests.status_codes.codes.unauthorized}'")
