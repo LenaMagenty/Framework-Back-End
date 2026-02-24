@@ -8,7 +8,7 @@ from services.university.models.base_student import DegreeEnum
 from services.university.models.group_request import GroupRequest
 from services.university.models.student_request import StudentRequest
 from services.university.university_service import UniversityService
-from utils.assertions import soft_assert_equal
+from utils.assertions import soft_assert_dict
 
 faker = Faker()
 
@@ -54,21 +54,20 @@ class TestStudentUpdate:
             student_request=updated_student_request
         )
 
-        errors: list[str] = []
+        actual_data = {
+            "id": updated_student_response.id,
+            "last_name": updated_student_response.last_name,
+            "first_name": updated_student_response.first_name,
+            "email": updated_student_response.email,
+            "group_id": updated_student_response.group_id
+        }
 
-        soft_assert_equal(updated_student_response.id, student_response.id,
-                          "Wrong student id after update.", errors)
+        expected_data = {
+            "id": student_response.id,
+            "last_name": new_last_name,
+            "first_name": student_response.first_name,
+            "email": student_response.email,
+            "group_id": student_response.group_id
+        }
 
-        soft_assert_equal(updated_student_response.last_name, new_last_name,
-                          "Last name wasn't updated.", errors)
-
-        soft_assert_equal(updated_student_response.first_name, student_response.first_name,
-                          "First name changed unexpectedly.", errors)
-
-        soft_assert_equal(updated_student_response.email, student_response.email,
-                          "Email changed unexpectedly.", errors)
-
-        soft_assert_equal(updated_student_response.group_id, student_response.group_id,
-                          "Group id changed unexpectedly.", errors)
-
-        assert not errors, "Soft-assert failures:\n" + "\n".join(errors)
+        soft_assert_dict(actual_data, expected_data)
