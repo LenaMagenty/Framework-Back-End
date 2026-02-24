@@ -35,7 +35,7 @@ jobs:
         run: ruff check .
 
       - name: Start system with Docker Compose
-        run: docker compose up -d
+        run: docker compose -f "Framework Back-End/docker-compose.yml" up -d
 
       - name: Wait for services to be ready
         run: |
@@ -70,20 +70,23 @@ jobs:
             -v "${PWD}/artifacts/allure-results:/app/allure-results" \
             api-tests:ci
 
+      - name: Install Allure
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-jre
+          wget https://repo.maven.apache.org/maven2/io/qameta/allure/allure-commandline/2.29.0/allure-commandline-2.29.0.tgz
+          tar -zxvf allure-commandline-2.29.0.tgz
+          sudo mv allure-2.29.0 /opt/allure
+          sudo ln -s /opt/allure/bin/allure /usr/bin/allure
+
       - name: Generate Allure report
         if: always()
         run: |
-          rm -rf artifacts/allure-report
-          mkdir -p artifacts/allure-report
-          docker run --rm \
-            -v "${PWD}/artifacts/allure-results:/allure-results" \
-            -v "${PWD}/artifacts/allure-report:/allure-report" \
-            frankescobar/allure-docker-service \
-            /bin/sh -lc "allure generate /allure-results -o /allure-report --clean"
+          allure generate artifacts/allure-results -o artifacts/allure-report --clean
 
       - name: Stop system
         if: always()
-        run: docker compose down -v
+        run: docker compose -f "Framework Back-End/docker-compose.yml" down -v
 
       - name: Upload Pages artifact
         if: always()
