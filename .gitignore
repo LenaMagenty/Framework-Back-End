@@ -32,9 +32,6 @@ coverage.xml
 
 # Docker
 *.tar
-docker-compose.yml
-Dockerfile
-.dockerignore
 
 # OS files
 .DS_Store

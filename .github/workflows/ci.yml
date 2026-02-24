@@ -35,7 +35,7 @@ jobs:
         run: ruff check .
 
       - name: Start system with Docker Compose
-        run: docker compose -f "Framework Back-End/docker-compose.yml" up -d
+        run: docker compose up -d
 
       - name: Wait for services to be ready
         run: |
@@ -86,7 +86,7 @@ jobs:
 
       - name: Stop system
         if: always()
-        run: docker compose -f "Framework Back-End/docker-compose.yml" down -v
+        run: docker compose down -v
 
       - name: Upload Pages artifact
         if: always()
