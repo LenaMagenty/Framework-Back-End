@@ -37,9 +37,6 @@ coverage.xml
 .DS_Store
 Thumbs.db
 
-# Environment variables
-.env
-.env.*
 
 # Temporary files
 *.swp

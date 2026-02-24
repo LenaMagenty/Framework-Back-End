@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -16,6 +17,7 @@ concurrency:
 jobs:
   test-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
 
     steps:
       - name: Checkout repository
@@ -35,7 +37,15 @@ jobs:
         run: ruff check .
 
       - name: Start system with Docker Compose
-        run: docker compose up -d
+        run: |
+          docker compose up -d --no-build
+          docker compose ps
+
+      - name: Compose logs on failure
+        if: failure()
+        run: |
+          docker compose ps
+          docker compose logs --no-color
 
       - name: Wait for services to be ready
         run: |
@@ -73,15 +83,18 @@ jobs:
       - name: Install Allure
         run: |
           sudo apt-get update
-          sudo apt-get install -y default-jre
-          wget https://repo.maven.apache.org/maven2/io/qameta/allure/allure-commandline/2.29.0/allure-commandline-2.29.0.tgz
-          tar -zxvf allure-commandline-2.29.0.tgz
+          sudo apt-get install -y default-jre wget tar
+          wget -q https://repo.maven.apache.org/maven2/io/qameta/allure/allure-commandline/2.29.0/allure-commandline-2.29.0.tgz
+          tar -xzf allure-commandline-2.29.0.tgz
           sudo mv allure-2.29.0 /opt/allure
-          sudo ln -s /opt/allure/bin/allure /usr/bin/allure
+          sudo ln -sf /opt/allure/bin/allure /usr/local/bin/allure
+          allure --version
 
       - name: Generate Allure report
         if: always()
         run: |
+          rm -rf artifacts/allure-report
+          mkdir -p artifacts/allure-report
           allure generate artifacts/allure-results -o artifacts/allure-report --clean
 
       - name: Stop system
