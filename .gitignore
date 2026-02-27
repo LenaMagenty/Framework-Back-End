@@ -41,3 +41,9 @@ Thumbs.db
 # Temporary files
 *.swp
 *.swo
+
+
+# Env
+.env
+.env.*
+!.env.example
