@@ -20,23 +20,35 @@ SERVICES = [
 
 
 @pytest.fixture(scope="session", autouse=True)  # True потому что фикстура стартует автоматически, а не вызывается.
-def services_readiness():
+def auth_service_readiness():
     timeout = 180
-
-    for url in SERVICES:
-        start_time = time.time()
-        while time.time() < start_time + timeout:
-            try:
-                response = requests.get(url)
-                response.raise_for_status()
-            except requests.RequestException:
-                time.sleep(1)  # try again in 1 second
-            else:
-                break
+    start_time = time.time()
+    while time.time() < start_time + timeout:
+        try:
+            response = requests.get(AuthService.SERVICE_URL + "/docs")  # эндпоинт для старта контейнера
+            response.raise_for_status()
+        except requests.RequestException:
+            time.sleep(1)  # try again in 1 second
         else:
-            raise RuntimeError(
-                f"Service at '{url}' wasn't started during '{timeout}' seconds."
-            )
+            break
+    else:
+        raise RuntimeError(f"Auth service wasn't started during '{timeout}' seconds.")
+
+
+@pytest.fixture(scope="session", autouse=True)  # True потому что фикстура стартует автоматически, а не вызывается.
+def university_service_readiness():
+    timeout = 180
+    start_time = time.time()
+    while time.time() < start_time + timeout:
+        try:
+            response = requests.get(UniversityService.SERVICE_URL + "/docs")  # эндпоинт для старта контейнера
+            response.raise_for_status()
+        except requests.RequestException:
+            time.sleep(1)  # try again in 1 second
+        else:
+            break
+    else:
+        raise RuntimeError(f"Auth service wasn't started during '{timeout}' seconds.")
 
 
 @pytest.fixture(scope="function", autouse=False)
