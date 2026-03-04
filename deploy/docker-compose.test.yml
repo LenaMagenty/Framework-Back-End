@@ -84,8 +84,16 @@ services:
         'sh', '-c',
         "set -e; \
          echo 'Waiting auth...'; \
-         for i in $(seq 1 60); do curl -fsS http://auth:8000/openapi.json >/dev/null && break; sleep 2; done; \
+         for i in $(seq 1 60); do \
+           curl -fsS http://auth:8000/openapi.json >/dev/null && AUTH_OK=1 && break; \
+           sleep 2; \
+         done; \
+         if [ -z \"${AUTH_OK:-}\" ]; then echo 'Auth is not ready'; exit 1; fi; \
          echo 'Waiting university...'; \
-         for i in $(seq 1 60); do curl -fsS http://university:8000/openapi.json >/dev/null && break; sleep 2; done; \
+         for i in $(seq 1 60); do \
+           curl -fsS http://university:8000/openapi.json >/dev/null && UNI_OK=1 && break; \
+           sleep 2; \
+         done; \
+         if [ -z \"${UNI_OK:-}\" ]; then echo 'University is not ready'; exit 1; fi; \
          pytest -q --alluredir=/app/allure-results"
       ]
