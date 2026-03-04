@@ -9,7 +9,7 @@ pipeline {
     stage('Run tests in docker compose') {
       steps {
         sh '''
-          docker compose -f deploy/docker-compose.test.yml up --build --exit-code-from tests tests
+          docker-compose -f deploy/docker-compose.test.yml up --build --exit-code-from tests tests
         '''
       }
     }
@@ -18,7 +18,7 @@ pipeline {
   post {
     always {
       sh '''
-        docker compose -f deploy/docker-compose.test.yml down -v || true
+        docker-compose -f deploy/docker-compose.test.yml down -v --remove-orphans || true
       '''
     }
   }
