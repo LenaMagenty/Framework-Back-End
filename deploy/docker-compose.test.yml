@@ -1,5 +1,3 @@
-version: '3.9'
-
 services:
   postgres-university:
     image: postgres:17
@@ -17,7 +15,7 @@ services:
       retries: 20
 
   auth-service:
-    image: auth-service:latest
+    image: mekidmetal/auth-service
     container_name: auth-service-test
     ports:
       - '18000:8000'
@@ -26,10 +24,27 @@ services:
         condition: service_healthy
 
   university-service:
-    image: university-service:latest
+    image: mekidmetal/university-service
     container_name: university-service-test
     ports:
       - '18001:8000'
     depends_on:
       postgres-university:
         condition: service_healthy
+
+  tests:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: backend-tests
+    depends_on:
+      postgres-university:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      university-service:
+        condition: service_started
+    environment:
+      AUTH_SERVICE_API_URL: 'http://auth-service:8000'
+      UNIVERSITY_SERVICE_API_URL: 'http://university-service:8000'
+    command: [ "pytest", "-q", "--alluredir=/app/allure-results" ]

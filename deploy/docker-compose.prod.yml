@@ -1,0 +1,36 @@
+version: '3.9'
+
+services:
+  postgres-university:
+    image: postgres:17
+    container_name: postgres-university
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: university
+    ports:
+      - '5431:5432'
+    volumes:
+      - postgres_university_data:/var/lib/postgresql/data
+    restart: always
+
+  auth-service:
+    image: mekidmeta
+    container_name: auth-service
+    ports:
+      - '8000:8000'
+    depends_on:
+      - postgres-university
+    restart: always
+
+  university-service:
+    image: mekidmeta
+    container_name: university-service
+    ports:
+      - '8001:8000'
+    depends_on:
+      - postgres-university
+    restart: always
+
+volumes:
+  postgres_university_data:
