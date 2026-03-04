@@ -9,6 +9,11 @@ services:
       POSTGRES_DB: 'auth'
     ports:
       - '55430:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d auth']
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   postgres_university:
     image: 'postgres:17'
@@ -19,6 +24,11 @@ services:
       POSTGRES_DB: 'university'
     ports:
       - '55432:5432'
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d university']
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   auth:
     image: 'mekidmetal/auth-service'
@@ -34,7 +44,13 @@ services:
     ports:
       - '18000:8000'
     depends_on:
-      - 'postgres_auth'
+      postgres_auth:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://localhost:8000/docs >/dev/null || exit 1']
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
   university:
     image: 'mekidmetal/university-service'
@@ -50,7 +66,15 @@ services:
     ports:
       - '18001:8000'
     depends_on:
-      - 'postgres_university'
+      postgres_university:
+        condition: service_healthy
+      auth:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://localhost:8000/docs >/dev/null || exit 1']
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
   tests:
     build:
@@ -58,11 +82,18 @@ services:
       dockerfile: 'Dockerfile'
     container_name: 'backend-tests'
     depends_on:
-      - 'postgres_auth'
-      - 'postgres_university'
-      - 'auth'
-      - 'university'
+      auth:
+        condition: service_healthy
+      university:
+        condition: service_healthy
     environment:
       AUTH_SERVICE_API_URL: 'http://auth:8000'
       UNIVERSITY_SERVICE_API_URL: 'http://university:8000'
-    command: ['pytest', '-q', '--alluredir=/app/allure-results']
+    command:
+      [
+        'sh', '-c',
+        "echo 'Waiting services...' && \
+         curl -fsS http://auth:8000/docs >/dev/null && \
+         curl -fsS http://university:8000/docs >/dev/null && \
+         pytest -q --alluredir=/app/allure-results"
+      ]
