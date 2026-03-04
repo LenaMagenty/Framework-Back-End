@@ -45,13 +45,13 @@ pipeline {
       steps {
         sh '''
         echo "Cleaning previous environment..."
-        docker compose -f deploy/docker-compose.test.yml down -v
+        docker compose -f deploy/docker-compose.test.yml down -v || true
 
         echo "Starting tests..."
         docker compose -f deploy/docker-compose.test.yml up --build --exit-code-from tests tests
         '''
-      }
     }
+}
 
   }
 
