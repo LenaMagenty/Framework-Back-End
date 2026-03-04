@@ -48,7 +48,7 @@ def university_service_readiness():
         else:
             break
     else:
-        raise RuntimeError(f"Auth service wasn't started during '{timeout}' seconds.")
+        raise RuntimeError(f"University service wasn't started during '{timeout}' seconds.")
 
 
 @pytest.fixture(scope="function", autouse=False)
