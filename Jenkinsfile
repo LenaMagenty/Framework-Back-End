@@ -2,7 +2,6 @@ pipeline {
     agent { label 'backend-agent' }
 
     options {
-        // чтобы билды не дрались за docker/volumes/порты
         disableConcurrentBuilds(abortPrevious: true)
         timestamps()
     }
@@ -63,6 +62,19 @@ pipeline {
             echo "POSTGRES UNIVERSITY LOGS:"
             docker compose -f deploy/docker-compose.test.yml logs --no-color --tail=200 postgres_university || true
 
+            echo "Workspace contents (for debugging):"
+            ls -la || true
+            ls -la allure-results || true
+            '''
+
+            // Публикация Allure (важно: ДО финального docker compose down)
+            allure([
+                includeProperties: false,
+                jdk: '',
+                results: [[path: 'allure-results']]
+            ])
+
+            sh '''
             echo "Final cleanup..."
             docker compose -f deploy/docker-compose.test.yml down -v --remove-orphans || true
             '''

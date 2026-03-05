@@ -46,6 +46,11 @@ services:
     depends_on:
       postgres_auth:
         condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:8000/openapi.json > /dev/null']
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
   university:
     image: 'mekidmetal/university-service'
@@ -64,7 +69,12 @@ services:
       postgres_university:
         condition: service_healthy
       auth:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -fsS http://127.0.0.1:8000/openapi.json > /dev/null']
+      interval: 5s
+      timeout: 5s
+      retries: 30
 
   tests:
     build:
@@ -79,27 +89,46 @@ services:
     environment:
       AUTH_SERVICE_API_URL: 'http://auth:8000'
       UNIVERSITY_SERVICE_API_URL: 'http://university:8000'
+    volumes:
+      - ../allure-results:/app/allure-results
     command:
       [
-        "sh", "-c",
+        'sh', '-c',
         "
+        set -eu;
+
         echo 'Waiting auth...';
+        READY=0;
         for i in $(seq 1 30); do
           if curl -fsS http://auth:8000/openapi.json > /dev/null; then
             echo 'Auth ready';
+            READY=1;
             break;
           fi;
           sleep 2;
         done;
+        if [ \"$READY\" -ne 1 ]; then
+          echo 'Auth not ready';
+          exit 1;
+        fi;
 
         echo 'Waiting university...';
+        READY=0;
         for i in $(seq 1 30); do
           if curl -fsS http://university:8000/openapi.json > /dev/null; then
             echo 'University ready';
+            READY=1;
             break;
           fi;
           sleep 2;
         done;
+        if [ \"$READY\" -ne 1 ]; then
+          echo 'University not ready';
+          exit 1;
+        fi;
+
+        rm -rf /app/allure-results || true;
+        mkdir -p /app/allure-results;
 
         pytest -q --alluredir=/app/allure-results
         "
