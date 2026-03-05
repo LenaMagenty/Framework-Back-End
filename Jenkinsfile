@@ -43,42 +43,43 @@ pipeline {
     }
 
     post {
-    always {
-        sh '''
-        set +e
+        always {
+            sh '''
+            set +e
 
-        echo "Containers status:"
-        docker compose -f deploy/docker-compose.test.yml ps || true
+            echo "Containers status:"
+            docker compose -f deploy/docker-compose.test.yml ps || true
 
-        echo "AUTH SERVICE LOGS:"
-        docker compose -f deploy/docker-compose.test.yml logs --no-color --tail=200 auth || true
+            echo "AUTH SERVICE LOGS:"
+            docker compose -f deploy/docker-compose.test.yml logs --no-color --tail=200 auth || true
 
-        echo "UNIVERSITY SERVICE LOGS:"
-        docker compose -f deploy/docker-compose.test.yml logs --no-color --tail=200 university || true
+            echo "UNIVERSITY SERVICE LOGS:"
+            docker compose -f deploy/docker-compose.test.yml logs --no-color --tail=200 university || true
 
-        echo "POSTGRES AUTH LOGS:"
-        docker compose -f deploy/docker-compose.test.yml logs --no-color --tail=200 postgres_auth || true
+            echo "POSTGRES AUTH LOGS:"
+            docker compose -f deploy/docker-compose.test.yml logs --no-color --tail=200 postgres_auth || true
 
-        echo "POSTGRES UNIVERSITY LOGS:"
-        docker compose -f deploy/docker-compose.test.yml logs --no-color --tail=200 postgres_university || true
+            echo "POSTGRES UNIVERSITY LOGS:"
+            docker compose -f deploy/docker-compose.test.yml logs --no-color --tail=200 postgres_university || true
 
-        echo "Workspace contents (for debugging):"
-        ls -la || true
-        ls -la allure-results || true
+            echo "Workspace contents (for debugging):"
+            ls -la || true
+            ls -la allure-results || true
 
-        echo "Allure results files:"
-        find allure-results -maxdepth 2 -type f | head -n 50 || true
-        '''
+            echo "Allure results files:"
+            find allure-results -maxdepth 2 -type f | head -n 50 || true
+            '''
 
-        allure([
-            includeProperties: false,
-            jdk: '',
-            results: [[path: 'allure-results']]
-        ])
+            allure([
+                includeProperties: false,
+                jdk: '',
+                results: [[path: 'allure-results']]
+            ])
 
-        sh '''
-        echo "Final cleanup..."
-        docker compose -f deploy/docker-compose.test.yml down -v --remove-orphans || true
-        '''
+            sh '''
+            echo "Final cleanup..."
+            docker compose -f deploy/docker-compose.test.yml down -v --remove-orphans || true
+            '''
+        }
     }
 }
