@@ -30,7 +30,7 @@ pipeline {
             steps {
                 sh '''
                 set +e
-
+                mkdir -p ${WORKSPACE}/allure-results
                 echo "Starting tests..."
                 docker compose -f deploy/docker-compose.test.yml up --build --exit-code-from tests tests
                 RESULT=$?
@@ -69,7 +69,7 @@ pipeline {
             echo "Allure results files:"
             find allure-results -maxdepth 2 -type f | head -n 50 || true
             '''
-            sh 'ls -la allure-results || true'
+
             allure([
                 includeProperties: false,
                 jdk: '',
