@@ -159,7 +159,7 @@ exec ./start.sh"
 
       mkdir -p /app/allure-results;
       rm -rf /app/allure-results/* /app/allure-results/.[!.]* /app/allure-results/..?* 2>/dev/null || true;
-
+      ls -la /app/allure-results || echo 'allure-results not mounted';
       pytest -q --alluredir=/app/allure-results
       "
     ]

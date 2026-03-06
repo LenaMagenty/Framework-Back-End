@@ -13,4 +13,6 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 
 COPY . /app
 
+RUN rm -rf /app/allure-results
+
 CMD ["pytest", "-q", "--alluredir=/app/allure-results"]
