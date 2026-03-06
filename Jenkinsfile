@@ -69,7 +69,7 @@ pipeline {
             echo "Allure results files:"
             find allure-results -maxdepth 2 -type f | head -n 50 || true
             '''
-
+            sh 'ls -la allure-results || true'
             allure([
                 includeProperties: false,
                 jdk: '',
