@@ -32,10 +32,14 @@ pipeline {
                 set +e
                 mkdir -p ${WORKSPACE}/allure-results
                 echo "Starting tests..."
-                WORKSPACE=${WORKSPACE} docker compose -f deploy/docker-compose.test.yml up --build --exit-code-from tests tests
+                docker compose -f deploy/docker-compose.test.yml up --build --exit-code-from tests tests
                 RESULT=$?
 
                 echo "Compose exit code: $RESULT"
+
+                echo "Copying allure results from container..."
+                docker cp backend-tests:/app/allure-results/. ${WORKSPACE}/allure-results/ || true
+
                 exit $RESULT
                 '''
             }
