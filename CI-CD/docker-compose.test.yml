@@ -1,0 +1,163 @@
+services:
+  postgres_auth:
+    image: 'postgres:17'
+    container_name: 'postgres-auth-test'
+    environment:
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: '1234'
+      POSTGRES_DB: 'auth'
+    ports:
+      - '55430:5432'
+    healthcheck:
+      test: [ 'CMD-SHELL', 'pg_isready -U postgres -d auth' ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  postgres_university:
+    image: 'postgres:17'
+    container_name: 'postgres-university-test'
+    environment:
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: '1234'
+      POSTGRES_DB: 'university'
+    ports:
+      - '55432:5432'
+    healthcheck:
+      test: [ 'CMD-SHELL', 'pg_isready -U postgres -d university' ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+
+  auth:
+    image: 'mekidmetal/auth-service'
+    container_name: 'auth-service-test'
+    environment:
+      UNIVERSITY_SERVICE_INTERNAL_URL: 'http://university:8000'
+      UNIVERSITY_SERVICE_API_URL: 'http://university:8000'
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: '1234'
+      POSTGRES_DB: 'auth'
+      POSTGRES_HOST: 'postgres_auth'
+      POSTGRES_PORT: '5432'
+    ports:
+      - '18000:8000'
+    depends_on:
+      postgres_auth:
+        condition: service_healthy
+    command: [
+      'sh','-c',
+      "python - <<'PY'\n\
+import socket, time\n\
+host='postgres_auth'; port=5432\n\
+for i in range(60):\n\
+    try:\n\
+        s=socket.create_connection((host,port), timeout=1)\n\
+        s.close()\n\
+        print('DB is reachable')\n\
+        break\n\
+    except Exception:\n\
+        print('Waiting DB...', i+1)\n\
+        time.sleep(1)\n\
+else:\n\
+    raise SystemExit('DB not reachable')\n\
+PY\n\
+exec ./start.sh"
+    ]
+
+  university:
+    image: 'mekidmetal/university-service'
+    container_name: 'university-service-test'
+    environment:
+      AUTH_SERVICE_INTERNAL_URL: 'http://auth:8000'
+      AUTH_SERVICE_API_URL: 'http://auth:8000'
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: '1234'
+      POSTGRES_DB: 'university'
+      POSTGRES_HOST: 'postgres_university'
+      POSTGRES_PORT: '5432'
+    ports:
+      - '18001:8000'
+    depends_on:
+      postgres_university:
+        condition: service_healthy
+      auth:
+        condition: service_started
+    command: [
+      'sh','-c',
+      "python - <<'PY'\n\
+import socket, time\n\
+def wait(host,port,seconds=60):\n\
+    for i in range(seconds):\n\
+        try:\n\
+            s=socket.create_connection((host,port), timeout=1)\n\
+            s.close()\n\
+            return True\n\
+        except Exception:\n\
+            time.sleep(1)\n\
+    return False\n\
+if not wait('postgres_university',5432,60):\n\
+    raise SystemExit('DB not reachable')\n\
+if not wait('auth',8000,60):\n\
+    raise SystemExit('Auth not reachable')\n\
+print('Deps are reachable')\n\
+PY\n\
+exec ./start.sh"
+    ]
+
+  tests:
+    build:
+      context: '..'
+      dockerfile: 'Dockerfile'
+    container_name: 'backend-tests'
+    depends_on:
+      auth:
+        condition: service_started
+      university:
+        condition: service_started
+    environment:
+      AUTH_SERVICE_API_URL: 'http://auth:8000'
+      UNIVERSITY_SERVICE_API_URL: 'http://university:8000'
+    command: [
+      'sh','-c',
+      "
+      set -eu;
+
+      echo 'Waiting auth...';
+      READY=0;
+      for i in $(seq 1 30); do
+        if curl -fsS http://auth:8000/openapi.json > /dev/null; then
+          echo 'Auth ready';
+          READY=1;
+          break;
+        fi;
+        sleep 2;
+      done;
+      if [ \"$$READY\" -ne 1 ]; then
+        echo 'Auth not ready';
+        exit 1;
+      fi;
+
+      echo 'Waiting university...';
+      READY=0;
+      for i in $(seq 1 30); do
+        if curl -fsS http://university:8000/openapi.json > /dev/null; then
+          echo 'University ready';
+          READY=1;
+          break;
+        fi;
+        sleep 2;
+      done;
+      if [ \"$$READY\" -ne 1 ]; then
+        echo 'University not ready';
+        exit 1;
+      fi;
+
+      mkdir -p /app/allure-results;
+      rm -rf /app/allure-results/* /app/allure-results/.[!.]* /app/allure-results/..?* 2>/dev/null || true;
+      ls -la /app/allure-results || echo 'allure-results not mounted';
+      pytest -q --alluredir=/app/allure-results
+      "
+    ]

@@ -1,0 +1,114 @@
+name: Framework Back-End CI/CD
+
+on:
+  pull_request:
+    branches: [ 'main' ]
+
+permissions:
+  contents: read
+  actions: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  lint:
+    name: Lint (Ruff)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install Ruff
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+
+      - name: Run Ruff
+        run: ruff check .
+
+  tests:
+    name: Tests + Allure build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    needs: lint
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Create .env for CI
+        run: |
+          cat > .env << EOF
+          POSTGRES_USER=${{ vars.POSTGRES_USER }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB_AUTH=${{ vars.POSTGRES_DB_AUTH }}
+          POSTGRES_DB_UNIVERSITY=${{ vars.POSTGRES_DB_UNIVERSITY }}
+          AUTH_SERVICE_INTERNAL_URL=${{ vars.AUTH_SERVICE_INTERNAL_URL }}
+          AUTH_SERVICE_API_URL=${{ vars.AUTH_SERVICE_API_URL }}
+          UNIVERSITY_SERVICE_INTERNAL_URL=${{ vars.UNIVERSITY_SERVICE_INTERNAL_URL }}
+          UNIVERSITY_SERVICE_API_URL=${{ vars.UNIVERSITY_SERVICE_API_URL }}
+          EOF  
+
+      - name: Start system with Docker Compose
+        run: |
+          docker compose up -d --no-build
+          docker compose ps
+
+      - name: Build tests image
+        run: docker build -t api-tests:ci .
+
+      - name: Run tests in Docker
+        run: |
+          rm -rf artifacts
+          mkdir -p artifacts/allure-results
+          docker run --rm \
+            --network host \
+            -v "${PWD}/artifacts/allure-results:/app/allure-results" \
+            api-tests:ci
+
+      - name: Install Allure
+        if: always()
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y default-jre wget tar
+          wget -q https://repo.maven.apache.org/maven2/io/qameta/allure/allure-commandline/2.29.0/allure-commandline-2.29.0.tgz
+          tar -xzf allure-commandline-2.29.0.tgz
+          sudo mv allure-2.29.0 /opt/allure
+          sudo ln -sf /opt/allure/bin/allure /usr/local/bin/allure
+          allure --version
+
+      - name: Generate Allure report
+        if: always()
+        run: |
+          rm -rf artifacts/allure-report
+          mkdir -p artifacts/allure-report
+          allure generate artifacts/allure-results -o artifacts/allure-report --clean
+
+      - name: Stop system
+        if: always()
+        run: docker compose down -v
+
+      - name: Upload Pages artifact
+        if: always()
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: artifacts/allure-report
+
+  deploy:
+    name: Deploy to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: tests
+    if: always()
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
